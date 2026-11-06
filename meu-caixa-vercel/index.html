@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meu Caixa – quanto sobra do seu salário</title>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<!--
+SQL para rodar no Supabase (SQL Editor):
+
+create table public.perfis (
+  user_id uuid primary key references auth.users on delete cascade,
+  dados jsonb not null default '{}',
+  atualizado_em timestamptz not null default now()
+);
+alter table public.perfis enable row level security;
+create policy "dono le" on public.perfis for select using (auth.uid() = user_id);
+create policy "dono insere" on public.perfis for insert with check (auth.uid() = user_id);
+create policy "dono atualiza" on public.perfis for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "dono apaga" on public.perfis for delete using (auth.uid() = user_id);
+-->
+<style>
+:root{--bg:#f2f5f4;--card:#fff;--ink:#12211f;--mute:#5d706d;--line:#dbe4e2;--acc:#0b6b5d;--accsoft:#d9efea;--bad:#b3261e;--warn:#9a5b00;--need:#0b6b5d;--want:#c2410c;--free:#1d4ed8;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1917;--card:#172522;--ink:#e6f0ee;--mute:#93a8a4;--line:#27403b;--acc:#4fd1bb;--accsoft:#1c3a35;--bad:#ff8a80;--warn:#ffc266;--need:#4fd1bb;--want:#ff9a62;--free:#7aa2ff;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1917;--card:#172522;--ink:#e6f0ee;--mute:#93a8a4;--line:#27403b;--acc:#4fd1bb;--accsoft:#1c3a35;--bad:#ff8a80;--warn:#ffc266;--need:#4fd1bb;--want:#ff9a62;--free:#7aa2ff;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+main{max-width:860px;margin:0 auto;padding:20px 16px 56px}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:16px}
+h1{font-size:1.15rem;margin:0}
+h2{font-size:1rem;margin:0 0 12px}
+button,select,input{font:inherit;color:inherit}
+button{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button.pri{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:700}
+:root[data-theme="dark"] button.pri{color:#06201b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) button.pri{color:#06201b}}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+input,select{padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);min-width:0;width:100%}
+.tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+.tabs button{border:0;border-radius:10px 10px 0 0;background:none;padding:10px 16px;font-weight:500;color:var(--mute)}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom:3px solid var(--acc);font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.lbl{color:var(--mute);font-size:.88rem}
+.big{font-size:2.2rem;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.val{font-size:1.3rem;font-weight:700}
+.pos{color:var(--acc)}.neg{color:var(--bad)}
+.grp{margin-top:18px}
+.grp:first-of-type{margin-top:6px}
+.grp h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:0 0 4px;font-weight:700}
+.line{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line)}
+.line input{border:0;background:none;border-radius:6px;padding:11px 4px}
+.line input.nm{flex:1}
+.line input.am{width:120px;text-align:right;font-variant-numeric:tabular-nums}
+.line .x{opacity:.35;padding:4px 6px}
+.line:hover .x,.line .x:focus{opacity:1}
+.add{border:0;background:none;color:var(--acc);padding:10px 4px;font-weight:700}
+.sub{display:flex;justify-content:space-between;font-size:.88rem;color:var(--mute);padding-top:8px}
+.stack{display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--line);margin:12px 0 6px}
+.stack i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.88rem;color:var(--mute)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.hint{font-size:.88rem;color:var(--mute)}
+.alert{padding:10px 12px;border-radius:10px;background:var(--accsoft);margin-top:10px;font-size:.92rem}
+.alert.w{background:transparent;border:1px solid var(--warn);color:var(--warn)}
+.ref{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:.95rem}
+.ref:last-child{border:0}
+.status{font-size:.85rem;color:var(--mute)}
+.x{border:0;background:none;color:var(--mute);padding:4px 8px}
+[hidden]{display:none!important}
+@media (max-width:680px){.two,.three{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Meu Caixa</h1>
+  <div><span class="status" id="status"></span> <button id="logout" hidden>Sair</button></div>
+</header>
+
+<section class="card" id="login" hidden>
+  <h2>Entre para salvar seus dados na nuvem</h2>
+  <p class="hint">Digite seu e-mail e enviaremos um link de acesso. Sem senha.</p>
+  <form id="loginform" class="two"><input id="email" type="email" placeholder="seu@email.com" required autocomplete="email"><button class="pri">Enviar link</button></form>
+  <p class="hint" id="loginmsg"></p>
+</section>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" id="t1" aria-selected="true" data-tab="p1">Orçamento</button>
+  <button role="tab" id="t2" aria-selected="false" data-tab="p2">Investir</button>
+</nav>
+
+<div id="p1">
+  <section class="card">
+    <h2>Quanto você recebe por mês?</h2>
+    <label class="lbl" for="sal">Salário líquido (o que cai na conta)</label>
+    <input id="sal" type="number" min="0" step="0.01" placeholder="Ex.: 4500">
+  </section>
+
+  <section class="card">
+    <h2>Seus gastos por mês</h2>
+    <div class="grp"><h3>Essenciais</h3><div id="need"></div><button class="add" data-add="need">+ Adicionar</button><div class="sub"><span>Total</span><b id="sNeed"></b></div></div>
+    <div class="grp"><h3>Desejos</h3><div id="want"></div><button class="add" data-add="want">+ Adicionar</button><div class="sub"><span>Total</span><b id="sWant"></b></div></div>
+  </section>
+
+  <section class="card">
+    <div class="lbl">Sobra no fim do mês</div>
+    <div class="big" id="sobra">R$ 0,00</div>
+    <div class="hint" id="sobrasub"></div>
+    <div class="stack" id="stack"></div>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--need)"></span>Essenciais <b id="lNeed"></b></span>
+      <span><span class="dot" style="background:var(--want)"></span>Desejos <b id="lWant"></b></span>
+      <span><span class="dot" style="background:var(--free)"></span>Sobra <b id="lFree"></b></span>
+    </div>
+    <div id="budgetalert"></div>
+  </section>
+
+  <p class="hint" style="margin:4px 4px 0">Referência 50/30/20: essenciais até 50%, desejos até 30%, sobra de pelo menos 20%. Você está em <b id="rNeed"></b> / <b id="rWant"></b> / <b id="rFree"></b>.</p>
+</div>
+
+<div id="p2" hidden>
+  <section class="card">
+    <h2>Reserva de emergência</h2>
+    <p class="hint">É o dinheiro que cobre seus gastos essenciais se você perder a renda. O ideal é ter isso antes de investir em outras coisas.</p>
+    <div class="two">
+      <div><label class="lbl" for="months">Quantos meses você quer cobrir?</label>
+        <select id="months"><option value="3">3 meses (emprego estável, sem dependentes)</option><option value="6">6 meses (indicado para a maioria)</option><option value="12">12 meses (autônomo ou renda variável)</option></select></div>
+      <div><label class="lbl" for="now">Quanto você já tem guardado para emergências?</label>
+        <input id="now" type="number" min="0" step="0.01" placeholder="0"></div>
+    </div>
+    <div class="three" style="margin-top:14px">
+      <div><div class="lbl">Meta da reserva</div><div class="val" id="goal"></div></div>
+      <div><div class="lbl">Você já tem</div><div class="val" id="have"></div></div>
+      <div><div class="lbl">Falta</div><div class="val" id="miss"></div></div>
+    </div>
+    <div class="stack"><i id="resbar" style="background:var(--acc);width:0"></i></div>
+  </section>
+
+  <section class="card">
+    <h2>Quanto guardar por mês</h2>
+    <div class="three">
+      <div><div class="lbl">Sugestão (20% do salário)</div><div class="val" id="sug"></div></div>
+      <div><div class="lbl">Sua sobra hoje</div><div class="val" id="sobra2"></div></div>
+      <div><div class="lbl">Sobra livre depois de guardar</div><div class="val" id="after"></div></div>
+    </div>
+    <div class="two" style="margin-top:14px;align-items:end">
+      <div><label class="lbl" for="aporte">Quanto você decide guardar por mês?</label>
+        <input id="aporte" type="number" min="0" step="0.01"></div>
+      <div><button id="usesug">Usar a sugestão</button></div>
+    </div>
+    <div id="plan"></div>
+  </section>
+
+  <section class="card">
+    <h2>Onde colocar o dinheiro</h2>
+    <p class="hint">A reserva de emergência costuma ficar em aplicações seguras e com resgate rápido, como Tesouro Selic ou CDB com liquidez diária. Só depois de completar a reserva faz sentido pensar em investimentos de prazo mais longo, que oscilam mais. Estas são orientações gerais e não uma recomendação personalizada; a decisão é sempre sua, e vale conversar com um profissional certificado para casos específicos.</p>
+  </section>
+</div>
+</main>
+
+<script>
+/* ===== Configuração do Supabase (opcional) =====
+   Cole aqui a URL e a chave "anon public" do seu projeto.
+   Deixe vazio para usar só o armazenamento deste aparelho. */
+var SUPABASE_URL="https://vgpvdkpbbyiwkrihvizh.supabase.co";
+var SUPABASE_ANON_KEY="sb_publishable_Y2b_0OTpYFTCp-63ZJYY2A_A0zmg4yH";
+
+var KEY="meucaixa_v2",db=null,user=null,timer=null;
+var brl=function(n){return (n||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})};
+var pct=function(n){return (isFinite(n)?Math.round(n*100):0)+"%"};
+var $=function(id){return document.getElementById(id)};
+var esc=function(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
+function fresh(){return {sal:0,months:6,now:0,aporte:null,cats:[
+  {name:"Moradia",v:0,t:"need"},
+  {name:"Contas da casa",v:0,t:"need"},
+  {name:"Alimentação",v:0,t:"need"},
+  {name:"Transporte",v:0,t:"need"},
+  {name:"Lazer",v:0,t:"want"},
+  {name:"Assinaturas",v:0,t:"want"}]}}
+var S=fresh();
+
+/* ---------- salvar e carregar ---------- */
+function setStatus(t){$("status").textContent=t}
+function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function loadLocal(){try{var s=localStorage.getItem(KEY);if(s)return JSON.parse(s)}catch(e){}return null}
+function persist(){
+  saveLocal();
+  if(!db||!user){setStatus("Salvo neste aparelho");return}
+  setStatus("Salvando…");clearTimeout(timer);
+  timer=setTimeout(function(){
+    db.from("perfis").upsert({user_id:user.id,dados:S,atualizado_em:new Date().toISOString()}).then(function(r){
+      setStatus(r.error?"Não foi possível salvar na nuvem":"Salvo na nuvem")});
+  },700);
+}
+function merge(d){if(d&&typeof d==="object"){S=Object.assign(fresh(),d);if(!Array.isArray(S.cats))S.cats=fresh().cats}}
+
+/* ---------- interface ---------- */
+function drawCats(){
+  ["need","want"].forEach(function(t){
+    $(t).innerHTML=S.cats.map(function(c,i){
+      if(c.t!==t)return "";
+      return '<div class="line"><input class="nm" data-n="'+i+'" value="'+esc(c.name)+'" aria-label="Nome" maxlength="40">'+
+        '<input class="am" data-v="'+i+'" type="number" min="0" step="0.01" value="'+(c.v||"")+'" placeholder="R$ 0" aria-label="Valor mensal de '+esc(c.name)+'">'+
+        '<button class="x" data-del="'+i+'" aria-label="Remover '+esc(c.name)+'">×</button></div>';
+    }).join("");
+  });
+}
+function calc(){
+  var sal=S.sal||0,need=0,want=0;
+  S.cats.forEach(function(c){if(c.t==="need")need+=c.v||0;else want+=c.v||0});
+  var tot=need+want,sobra=sal-tot;
+  $("sobra").textContent=brl(sobra);$("sobra").className="big "+(sobra<0?"neg":"pos");
+  $("sobrasub").textContent=sal?("Você gasta "+brl(tot)+" de "+brl(sal)+" ("+pct(tot/sal)+" do salário)"):"Informe seu salário para ver a conta.";
+  var base=Math.max(sal,tot,1);
+  $("stack").innerHTML='<i style="width:'+need/base*100+'%;background:var(--need)"></i><i style="width:'+want/base*100+'%;background:var(--want)"></i><i style="width:'+Math.max(sobra,0)/base*100+'%;background:var(--free)"></i>';
+  $("sNeed").textContent=brl(need);$("sWant").textContent=brl(want);$("lNeed").textContent=brl(need);$("lWant").textContent=brl(want);$("lFree").textContent=brl(sobra);
+  $("rNeed").textContent=sal?pct(need/sal):"–";$("rWant").textContent=sal?pct(want/sal):"–";$("rFree").textContent=sal?pct(sobra/sal):"–";
+  var a="";
+  if(sal&&sobra<0)a='<div class="alert w">Seus gastos passam do seu salário em '+brl(-sobra)+'. Vale revisar primeiro os itens marcados como desejo.</div>';
+  else if(sal&&sobra/sal<.2)a='<div class="alert">Sua sobra está abaixo de 20% do salário. Se quiser guardar mais, os desejos são o primeiro lugar para olhar, mas a escolha é sua.</div>';
+  else if(sal)a='<div class="alert">Sua sobra está em linha com a referência de 20%. Veja na aba Investir o que fazer com ela.</div>';
+  $("budgetalert").innerHTML=a;
+
+  var m=+S.months,goal=(need>0?need:tot)*m,have=S.now||0,miss=Math.max(goal-have,0);
+  $("goal").textContent=brl(goal);$("have").textContent=brl(have);$("miss").textContent=brl(miss);
+  $("resbar").style.width=(goal?Math.min(have/goal,1)*100:0)+"%";
+  var sug=sal*.2;$("sug").textContent=brl(sug);
+  $("sobra2").textContent=brl(sobra);$("sobra2").className="val "+(sobra<0?"neg":"");
+  var ap=S.aporte==null?Math.max(Math.min(sug,sobra),0):S.aporte;
+  var ai=$("aporte");if(document.activeElement!==ai)ai.value=ap?ap:"";
+  $("after").textContent=brl(sobra-ap);
+  var p="";
+  if(!sal)p='<div class="alert">Informe seu salário na aba Orçamento para ver o plano.</div>';
+  else{
+    if(ap>Math.max(sobra,0))p+='<div class="alert w">Esse valor é maior que a sua sobra. Para guardar tanto, você precisaria reduzir gastos.</div>';
+    if(ap<=0)p+='<div class="alert">Com R$ 0 por mês, a reserva não avança. Mesmo um valor pequeno e constante ajuda.</div>';
+    else if(miss>0){
+      var n=Math.ceil(miss/ap),d=new Date();d.setMonth(d.getMonth()+n);
+      p+='<div class="alert">Guardando '+brl(ap)+' por mês, sua reserva fica completa em cerca de <b>'+n+(n===1?" mês":" meses")+'</b> (por volta de '+d.toLocaleDateString("pt-BR",{month:"long",year:"numeric"})+'). Depois disso, esse mesmo valor pode ir para outros objetivos.</div>';
+    }else p+='<div class="alert">Sua reserva já está completa. Os '+brl(ap)+' por mês podem ir para objetivos de prazo maior.</div>';
+  }
+  $("plan").innerHTML=p;
+}
+function sync(){calc();persist()}
+function fill(){
+  $("sal").value=S.sal||"";$("months").value=String(S.months);$("now").value=S.now||"";
+  drawCats();calc();
+}
+
+document.addEventListener("input",function(e){
+  var t=e.target,d=t.dataset;
+  if(t.id==="sal")S.sal=+t.value||0;
+  else if(t.id==="now")S.now=+t.value||0;
+  else if(t.id==="months")S.months=+t.value;
+  else if(t.id==="aporte")S.aporte=t.value===""?0:(+t.value||0);
+  else if(d.n!==undefined)S.cats[d.n].name=t.value;
+  else if(d.v!==undefined)S.cats[d.v].v=+t.value||0;
+  else return;
+  sync();
+});
+document.addEventListener("click",function(e){
+  var t=e.target.closest("button");if(!t)return;
+  if(t.dataset.tab){["p1","p2"].forEach(function(p){$(p).hidden=p!==t.dataset.tab});
+    document.querySelectorAll(".tabs button").forEach(function(b){b.setAttribute("aria-selected",b===t)})}
+  else if(t.dataset.del!==undefined){S.cats.splice(+t.dataset.del,1);drawCats();sync()}
+  else if(t.dataset.add){S.cats.push({name:"Novo item",v:0,t:t.dataset.add});drawCats();sync()}
+  else if(t.id==="usesug"){S.aporte=null;sync()}
+  else if(t.id==="logout"&&db){db.auth.signOut()}
+});
+
+/* ---------- Supabase ---------- */
+function startCloud(){
+  db=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+  $("login").hidden=false;
+  $("loginform").addEventListener("submit",function(e){
+    e.preventDefault();$("loginmsg").textContent="Enviando…";
+    db.auth.signInWithOtp({email:$("email").value,options:{emailRedirectTo:location.href.split("#")[0]}}).then(function(r){
+      $("loginmsg").textContent=r.error?"Não foi possível enviar o link. Confira o e-mail e tente de novo.":"Pronto. Abra o link que enviamos para o seu e-mail."});
+  });
+  db.auth.onAuthStateChange(function(ev,session){
+    user=session?session.user:null;
+    $("login").hidden=!!user;$("logout").hidden=!user;
+    if(!user){setStatus("Salvo neste aparelho");return}
+    db.from("perfis").select("dados").eq("user_id",user.id).maybeSingle().then(function(r){
+      if(r.error){setStatus("Não foi possível carregar da nuvem");return}
+      if(r.data&&r.data.dados&&Object.keys(r.data.dados).length){merge(r.data.dados);fill();saveLocal();setStatus("Salvo na nuvem")}
+      else persist();
+    });
+  });
+}
+
+merge(loadLocal());fill();setStatus("Salvo neste aparelho");
+if(SUPABASE_URL&&SUPABASE_ANON_KEY&&window.supabase){try{startCloud()}catch(e){setStatus("Supabase não configurado corretamente")}}
+</script>
+</body>
+</html>
